@@ -21,6 +21,7 @@ memory = { 0: {
     "title": "Sample Task 3",
     "done": False
     }}
+backup_memory = memory.copy()
 
 class Task(BaseModel):
     title: Optional[str] = None
@@ -38,8 +39,24 @@ async def root():
     return {"Hello": "World"}
 
 @app.get("/tasks")
-async def get_tasks():
-    return memory
+async def search_tasks(search: str | None = None, done: bool | None = None):
+    if search is None and done is None:
+        return memory
+    result = []
+    if search is not None and done is not None:
+        for task_id in memory:
+            if search.lower() in memory[task_id]["title"].lower() and memory[task_id]["done"] == done:
+                result.append(memory[task_id])
+        return result
+    else:
+        for task_id in memory:
+            if search is not None and search.lower() in memory[task_id]["title"].lower():
+                result.append(memory[task_id])
+            elif done is not None and memory[task_id]["done"] == done:
+                result.append(memory[task_id])
+        return result
+
+
 
 @app.get("/tasks/{id}")
 async def get_task(id: int):
@@ -87,3 +104,15 @@ async def delete_task(id: int):
             del memory[task_id]
             return {"message": "No Content"}
     return JSONResponse(status_code=404, content={"error": f"Task {id} not found"})
+
+@app.get("/stats")
+async def get_stats():
+    total_tasks = len(memory)
+    incomplete_tasks = len([task for task in memory.values() if not task["done"]])
+    completed_tasks = total_tasks - incomplete_tasks
+    return { "total": total_tasks, "done": completed_tasks, "open": incomplete_tasks}
+@app.post("/reset", status_code=204)
+async def reset_tasks():
+    global memory
+    memory = backup_memory.copy()
+    return {"message": "Reset successful"}
