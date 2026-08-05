@@ -1,5 +1,5 @@
 # CRUD backend API
-A small API that manages a task list: create, read update, search, delete tasks.
+A small API that manages a task list: create, read, update, search, delete tasks.
 # How to install/run API
 Download/Extract this respository
 Install python 3.10+
