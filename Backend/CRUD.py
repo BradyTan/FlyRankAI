@@ -4,6 +4,23 @@ from fastapi.exception_handlers import RequestValidationError
 from fastapi import FastAPI, Request
 from typing import Optional
 from pydantic import BaseModel
+import sqlite3
+data = [
+        ("Sample Task 1", 0),
+        ("Sample Task 2", 0),
+        ("Sample Task 3", 0)
+]
+with sqlite3.connect("tasks.db") as connection:
+    cursor = connection.cursor()
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title text NOT NULL,
+        done BOOLEAN NOT NULL CHECK (done IN (0,1)))
+    """)
+    if cursor.execute("SELECT * FROM tasks").rowcount == 0:
+        cursor.executemany("INSERT INTO tasks (title, done) VALUES (?, ?)", data)
+        connection.commit()
 app = FastAPI()
 
 memory = { 0: {
