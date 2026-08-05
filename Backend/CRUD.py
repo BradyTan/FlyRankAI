@@ -16,7 +16,7 @@ with sqlite3.connect("tasks.db") as connection:
     CREATE TABLE IF NOT EXISTS tasks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title text NOT NULL,
-        done BOOLEAN NOT NULL CHECK (done IN (0,1)))
+        done BOOLEAN NOT NULL CHECK (done IN (0,1)));
     """)
     if cursor.execute("SELECT * FROM tasks").rowcount == 0:
         cursor.executemany("INSERT INTO tasks (title, done) VALUES (?, ?)", data)
@@ -58,29 +58,38 @@ async def root():
 @app.get("/tasks")
 async def search_tasks(search: str | None = None, done: bool | None = None):
     if search is None and done is None:
-        return memory
-    result = []
+        with sqlite3.connect("tasks.db") as connection:
+            cursor = connection.cursor()
+            cursor.execute("SELECT * FROM tasks")
+            return cursor.fetchall()
+        
+    result = ()
     if search is not None and done is not None:
-        for task_id in memory:
-            if search.lower() in memory[task_id]["title"].lower() and memory[task_id]["done"] == done:
-                result.append(memory[task_id])
-        return result
+        with sqlite3.connect("tasks.db") as connection:
+            cursor = connection.cursor()
+            cursor.execute("SELECT * FROM tasks WHERE title LIKE ? AND done = ?;", (f"%{search}%", int(done)))
+            return cursor.fetchall()
     else:
-        for task_id in memory:
-            if search is not None and search.lower() in memory[task_id]["title"].lower():
-                result.append(memory[task_id])
-            elif done is not None and memory[task_id]["done"] == done:
-                result.append(memory[task_id])
-        return result
+        with sqlite3.connect("tasks.db") as connection:
+            cursor = connection.cursor()
+            if search is not None:
+                cursor.execute("SELECT * FROM tasks WHERE title LIKE ?;", (f"%{search}%",))
+            elif done is not None:
+                cursor.execute("SELECT * FROM tasks WHERE done = ?;", (int(done),))
+            return cursor.fetchall()
+    return result
 
 
 
 @app.get("/tasks/{id}")
 async def get_task(id: int):
-    for task_id in memory:
-        if memory[task_id]["id"] == id:
-            return memory[task_id]
-    return JSONResponse(status_code=404, content={"error": f"Task {id} not found"})
+    with sqlite3.connect("tasks.db") as connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM tasks WHERE id = ?;", (id,))
+        task = cursor.fetchone()
+        if task is not None:
+            return task
+        return JSONResponse(status_code=404, content={"error": f"Task {id} not found"})
 
 @app.get("/health")
 async def health_check():
