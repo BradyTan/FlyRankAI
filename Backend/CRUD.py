@@ -101,33 +101,51 @@ async def create_task(task: Task):
         return JSONResponse(status_code=400, content={"error": "Title is required"})
     if str(task.title).strip("{}") == "":
         return JSONResponse(status_code=400, content={"error": "Task cannot be empty"})
-    with sqlite3.connect("tasks.db") as connection:
+    with sqlite3.connect("tasks.db") as connection:   
         cursor = connection.cursor()
         cursor.execute("INSERT INTO tasks (title, done) VALUES (?, ?);", (task.title, False))
         connection.commit()
-        return {"id": cursor.lastrowid, "title": task.title, "done": False}
+        cursor.execute("SELECT * FROM tasks WHERE id = ?;", (cursor.lastrowid,))
+        return cursor.fetchone()
+
+            
 
 @app.put("/tasks/{id}")
 async def update_task(task: Task):
-    print(task.done)
-    if task.title == None and task.done == None:
-        return JSONResponse(status_code=400, content={"error": "Task title or done status is required"})
-    for task_id in memory:
-        if memory[task_id]["id"] == task.id:
-            if task.title != None:
-                memory[task_id]["title"] = task.title
-            if task.done != None:
-                memory[task_id]["done"] = task.done
-            return memory[task_id]
-    return JSONResponse(status_code=404, content={"error": f"Task {task.id} not found"}) 
+    if task.title == None or task.done == None or task.id == None:
+        return JSONResponse(status_code=400, content={"error": "Invalid body"})
+    with sqlite3.connect("tasks.db") as connection:
+        cursor = connection.cursor()
+        try:
+            cursor.execute("BEGIN;")
+            cursor.execute("UPDATE tasks SET title = ?, done = ? WHERE id = ?;", (task.title, task.done, task.id))
+            connection.commit()
+            if cursor.rowcount > 0 and cursor.rowcount is not None:
+                cursor.execute("SELECT * FROM tasks WHERE id = ?;", (task.id,))
+                return cursor.fetchone()
+            else:
+                return JSONResponse(status_code=404, content={"error": f"Task {task.id} not found"}) 
+                
+        except Exception as e:
+            connection.rollback()
+            return JSONResponse(status_code=500, content={"error": f"Unable to update task: {e}"}) 
 
 @app.delete("/tasks/{id}", status_code=204)
 async def delete_task(id: int):
-    for task_id in memory:
-        if memory[task_id]["id"] == id:
-            del memory[task_id]
-            return {"message": "No Content"}
-    return JSONResponse(status_code=404, content={"error": f"Task {id} not found"})
+    with sqlite3.connect("tasks.db") as connection:
+        cursor = connection.cursor()
+        try:
+            cursor.execute("BEGIN;")
+            cursor.execute("DELETE FROM tasks WHERE id = ?;",(id,))
+            connection.commit()
+            if cursor.rowcount > 0 and cursor.rowcount is not None:
+                return {"message": "No Content"}
+            else:
+                return JSONResponse(status_code=404, content={"error":"Unknown id"})
+        except Exception as e:
+            connection.rollback()
+            return JSONResponse(status_code=500, content={"error": f"Unable to delete the task: {e}"})
+    
 
 @app.get("/stats")
 async def get_stats():
