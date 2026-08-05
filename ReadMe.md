@@ -31,3 +31,16 @@ The tasks I created are not saved. The client is running a local list, and it is
 I run this query: "SELECT count(*) FROM tasks;"
 It returns a table with a cell with the number eight. The column has a label with "count(*)", and the row has a label with "1".
 
+Why SQLite was chosen?
+It is because SQLite is built into Python, so there is no need to install it. SQLite is serverless, self-contained, zero-configuration, and transactional feature. So there is no need to install a client. There is no need to mess with the configuration files.
+
+
+The database lives at the root of the directory.
+
+
+Windows 10:
+***
+    .venv\Scripts\activate \\
+    uvicorn Backend.CRUD:app --reload
+***
+![Database](./image/Database.PNG)
