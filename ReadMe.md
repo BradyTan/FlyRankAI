@@ -4,8 +4,11 @@ A small API that manages a task list: create, read, update, search, delete tasks
 Download/Extract this respository
 Install python 3.10+
 For Windows:
+
 ***
-    .venv\Scripts\activate \\
+    python -m venv .venv
+    .venv\Scripts\activate
+    python -m pip install -r .\Backend\requirement.txt
     uvicorn Backend.CRUD:app --reload
 ***
 | Endpoints | 
@@ -37,10 +40,15 @@ It is because SQLite is built into Python, so there is no need to install it. SQ
 
 The database lives at the root of the directory.
 
+How to run the database:
+Download/Extract this respository
+Install python 3.10+
+For Windows:
 
-Windows 10:
 ***
-    .venv\Scripts\activate \\
+    python -m venv .venv
+    .venv\Scripts\activate
+    python -m pip install -r .\Backend\requirement.txt
     uvicorn Backend.CRUD:app --reload
 ***
 ![Database](./image/Database.PNG)
