@@ -2,7 +2,9 @@
 A small API that manages a task list: create, read, update, search, delete tasks.
 # How to install/run API
 Download/Extract this respository
+
 Install python 3.10+
+
 For Windows:
 
 ***
@@ -29,6 +31,7 @@ content-length: 39
 content-type: application/json
 
 The tasks I created are not saved. The client is running a local list, and it is not sending any data across the network.
+
 ![Swagger UI](./image/Swagger.png)
 # Week 2 SQL database
 I run this query: "SELECT count(*) FROM tasks;"
@@ -41,8 +44,11 @@ It is because SQLite is built into Python, so there is no need to install it. SQ
 The database lives at the root of the directory.
 
 How to run the database:
+
 Download/Extract this respository
+
 Install python 3.10+
+
 For Windows:
 
 ***
