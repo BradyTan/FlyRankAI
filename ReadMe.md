@@ -1,4 +1,4 @@
-# CRUD backend API
+# Week 1: CRUD backend API
 A small API that manages a task list: create, read, update, search, delete tasks.
 # How to install/run API
 Download/Extract this respository
@@ -27,3 +27,7 @@ content-type: application/json
 
 The tasks I created are not saved. The client is running a local list, and it is not sending any data across the network.
 ![Swagger UI](./image/Swagger.png)
+# Week 2 SQL database
+I run this query: "SELECT count(*) FROM tasks;"
+It returns a table with a cell with the number eight. The column has a label with "count(*)", and the row has a label with "1".
+
