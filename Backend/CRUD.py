@@ -19,7 +19,7 @@ with sqlite3.connect("tasks.db") as connection:
         done BOOLEAN NOT NULL CHECK (done IN (0,1)));
     """)
     cursor.execute("PRAGMA journal_mode=WAL;")
-    if cursor.execute("SELECT * FROM tasks").rowcount == 0:
+    if not cursor.execute("SELECT 1 FROM tasks LIMIT 1").fetchone():
         cursor.executemany("INSERT INTO tasks (title, done) VALUES (?, ?);", data)
         connection.commit()
 app = FastAPI()
@@ -103,7 +103,6 @@ async def create_task(task: Task):
         return JSONResponse(status_code=400, content={"error": "Task cannot be empty"})
     with sqlite3.connect("tasks.db") as connection:
         cursor = connection.cursor()
-        cursor.execute("BEGIN;")
         cursor.execute("INSERT INTO tasks (title, done) VALUES (?, ?);", (task.title, False))
         connection.commit()
         return {"id": cursor.lastrowid, "title": task.title, "done": False}
