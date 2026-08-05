@@ -1,3 +1,7 @@
+tasks.db
+tasks.db-shm
+tasks.db-wal
+tasks.db
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

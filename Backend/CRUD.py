@@ -18,8 +18,9 @@ with sqlite3.connect("tasks.db") as connection:
         title text NOT NULL,
         done BOOLEAN NOT NULL CHECK (done IN (0,1)));
     """)
+    cursor.execute("PRAGMA journal_mode=WAL;")
     if cursor.execute("SELECT * FROM tasks").rowcount == 0:
-        cursor.executemany("INSERT INTO tasks (title, done) VALUES (?, ?)", data)
+        cursor.executemany("INSERT INTO tasks (title, done) VALUES (?, ?);", data)
         connection.commit()
 app = FastAPI()
 
@@ -57,18 +58,17 @@ async def root():
 
 @app.get("/tasks")
 async def search_tasks(search: str | None = None, done: bool | None = None):
+    result = ()
     if search is None and done is None:
         with sqlite3.connect("tasks.db") as connection:
             cursor = connection.cursor()
             cursor.execute("SELECT * FROM tasks")
-            return cursor.fetchall()
-        
-    result = ()
-    if search is not None and done is not None:
+            result = cursor.fetchall()
+    elif search is not None and done is not None:
         with sqlite3.connect("tasks.db") as connection:
             cursor = connection.cursor()
             cursor.execute("SELECT * FROM tasks WHERE title LIKE ? AND done = ?;", (f"%{search}%", int(done)))
-            return cursor.fetchall()
+            result = cursor.fetchall()
     else:
         with sqlite3.connect("tasks.db") as connection:
             cursor = connection.cursor()
@@ -76,8 +76,8 @@ async def search_tasks(search: str | None = None, done: bool | None = None):
                 cursor.execute("SELECT * FROM tasks WHERE title LIKE ?;", (f"%{search}%",))
             elif done is not None:
                 cursor.execute("SELECT * FROM tasks WHERE done = ?;", (int(done),))
-            return cursor.fetchall()
-    return result
+            result = cursor.fetchall()
+    return  result
 
 
 
@@ -87,9 +87,9 @@ async def get_task(id: int):
         cursor = connection.cursor()
         cursor.execute("SELECT * FROM tasks WHERE id = ?;", (id,))
         task = cursor.fetchone()
-        if task is not None:
-            return task
-        return JSONResponse(status_code=404, content={"error": f"Task {id} not found"})
+        if task is None:
+            return JSONResponse(status_code=404, content={"error": f"Task {id} not found"})
+        return task
 
 @app.get("/health")
 async def health_check():
@@ -98,16 +98,15 @@ async def health_check():
 @app.post("/tasks", status_code=201)
 async def create_task(task: Task):
     if task.title is None:
-        return JSONResponse(status_code=400, content={"error": "Task title is required"})
+        return JSONResponse(status_code=400, content={"error": "Title is required"})
     if str(task.title).strip("{}") == "":
         return JSONResponse(status_code=400, content={"error": "Task cannot be empty"})
-    index = len(memory) + 1
-    memory[index] = {
-        "id": index,
-        "title": task.title,
-        "done": False
-    }
-    return memory[index]
+    with sqlite3.connect("tasks.db") as connection:
+        cursor = connection.cursor()
+        cursor.execute("BEGIN;")
+        cursor.execute("INSERT INTO tasks (title, done) VALUES (?, ?);", (task.title, False))
+        connection.commit()
+        return {"id": cursor.lastrowid, "title": task.title, "done": False}
 
 @app.put("/tasks/{id}")
 async def update_task(task: Task):
