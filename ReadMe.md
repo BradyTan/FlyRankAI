@@ -17,6 +17,7 @@ For Windows:
 |-----------|
 | POST /tasks |
 | GET /tasks - GET /tasks?search={task} - GET /tasks?done={bool} - GET /tasks?search={task}&done={bool}  - GET /tasks/3 |
+| GET /sort |
 | PUT /tasks/3 |
 | DELETE /tasks/3 |
 | GET /stats |
@@ -43,6 +44,7 @@ It is because SQLite is built into Python, so there is no need to install it. SQ
 
 The database lives at the root of the directory.
 
+When adding the column created_at and updated_at, the table become wider. I have to edit a class for the new columns and methods.
 How to run the database:
 
 Download/Extract this respository

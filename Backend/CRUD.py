@@ -10,12 +10,15 @@ data = [
         ("Sample Task 2", 0),
         ("Sample Task 3", 0)
 ]
+
 with sqlite3.connect("tasks.db") as connection:
     cursor = connection.cursor()
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS tasks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title text NOT NULL,
+        title TEXT NOT NULL,
+        created_at TEXT default CURRENT_TIMESTAMP,
+        updated_at TEXT default CURRENT_TIMESTAMP,
         done BOOLEAN NOT NULL CHECK (done IN (0,1)));
     """)
     cursor.execute("PRAGMA journal_mode=WAL;")
@@ -24,27 +27,12 @@ with sqlite3.connect("tasks.db") as connection:
         connection.commit()
 app = FastAPI()
 
-memory = { 0: {
-    "id": 0,
-    "title": "Sample Task",
-    "done": False
-    }
-         , 1: {
-    "id": 1,
-    "title": "Sample Task 2",
-    "done": False
-    }
-         , 2: {
-    "id": 2,
-    "title": "Sample Task 3",
-    "done": False
-    }}
-backup_memory = memory.copy()
-
 class Task(BaseModel):
     title: Optional[str] = None
     id: Optional[int] = None
     done: Optional[bool] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -78,7 +66,12 @@ async def search_tasks(search: str | None = None, done: bool | None = None):
                 cursor.execute("SELECT * FROM tasks WHERE done = ?;", (int(done),))
             result = cursor.fetchall()
     return  result
-
+@app.get("/sort")
+async def sort():
+    with sqlite3.connect("tasks.db") as connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM tasks ORDER BY title")
+        return cursor.fetchall()
 
 
 @app.get("/tasks/{id}")
@@ -112,13 +105,13 @@ async def create_task(task: Task):
 
 @app.put("/tasks/{id}")
 async def update_task(task: Task):
-    if task.title == None or task.done == None or task.id == None:
+    if task.title == None or task.done == None or task.id == None or task.created_at == None or task.updated_at == None:
         return JSONResponse(status_code=400, content={"error": "Invalid body"})
     with sqlite3.connect("tasks.db") as connection:
         cursor = connection.cursor()
         try:
             cursor.execute("BEGIN;")
-            cursor.execute("UPDATE tasks SET title = ?, done = ? WHERE id = ?;", (task.title, task.done, task.id))
+            cursor.execute("UPDATE tasks SET title = ?, done = ?, created_at = ?, updated_at = ? WHERE id = ?;", (task.title, task.done, task.created_at, task.updated_at , task.id))
             connection.commit()
             if cursor.rowcount > 0 and cursor.rowcount is not None:
                 cursor.execute("SELECT * FROM tasks WHERE id = ?;", (task.id,))
@@ -149,12 +142,26 @@ async def delete_task(id: int):
 
 @app.get("/stats")
 async def get_stats():
-    total_tasks = len(memory)
-    incomplete_tasks = len([task for task in memory.values() if not task["done"]])
-    completed_tasks = total_tasks - incomplete_tasks
-    return { "total": total_tasks, "done": completed_tasks, "open": incomplete_tasks}
+    with sqlite3.connect("tasks.db") as connection:
+        cursor = connection.cursor()
+        total_tasks = cursor.execute("SELECT COUNT(*) FROM tasks;").fetchone()[0]
+        incomplete_tasks = cursor.execute("SELECT COUNT(*) FROM tasks WHERE done = 0;").fetchone()[0]
+        completed_tasks = total_tasks - incomplete_tasks
+        return { "total": total_tasks, "done": completed_tasks, "open": incomplete_tasks}
 @app.post("/reset", status_code=204)
 async def reset_tasks():
-    global memory
-    memory = backup_memory.copy()
-    return {"message": "Reset successful"}
+   with sqlite3.connect("tasks.db") as connection:
+        cursor = connection.cursor()
+        cursor.execute("DROP TABLE tasks")
+        connection.commit()
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title text NOT NULL,
+            done BOOLEAN NOT NULL CHECK (done IN (0,1)));
+        """)
+        if not cursor.execute("SELECT 1 FROM tasks LIMIT 1").fetchone():
+            cursor.executemany("INSERT INTO tasks (title, done) VALUES (?, ?);", data)
+            connection.commit()
+
+        
