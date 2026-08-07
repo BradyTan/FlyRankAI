@@ -27,7 +27,7 @@ with psycopg.connect(DATABASE_URL) as conn:
         if not cur.execute("SELECT 1 FROM tasks LIMIT 1").fetchone():
             cur.executemany("INSERT INTO tasks (title, done) VALUES (%s, %s);", data)
             conn.commit()
-        print(cur.execute("SELECT * FROM tasks").fetchall())
+        
 app = FastAPI()
 class Task(BaseModel):
     title: Optional[str] = None
@@ -50,41 +50,41 @@ async def root():
 async def search_tasks(search: str | None = None, done: bool | None = None):
     result = ()
     if search is None and done is None:
-        with sqlite3.connect("tasks.db") as connection:
-            cursor = connection.cursor()
-            cursor.execute("SELECT * FROM tasks")
-            result = cursor.fetchall()
+        with psycopg.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT * FROM tasks")
+                result = cur.fetchall()
     elif search is not None and done is not None:
-        with sqlite3.connect("tasks.db") as connection:
-            cursor = connection.cursor()
-            cursor.execute("SELECT * FROM tasks WHERE title LIKE ? AND done = ?;", (f"%{search}%", int(done)))
-            result = cursor.fetchall()
+        with psycopg.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT * FROM tasks WHERE title LIKE %s AND done = %s;", (f"%{search}%", int(done)))
+                result = cur.fetchall()
     else:
-        with sqlite3.connect("tasks.db") as connection:
-            cursor = connection.cursor()
-            if search is not None:
-                cursor.execute("SELECT * FROM tasks WHERE title LIKE ?;", (f"%{search}%",))
-            elif done is not None:
-                cursor.execute("SELECT * FROM tasks WHERE done = ?;", (int(done),))
-            result = cursor.fetchall()
+        with psycopg.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                if search is not None:
+                    cur.execute("SELECT * FROM tasks WHERE title LIKE %s;", (f"%{search}%",))
+                elif done is not None:
+                    cur.execute("SELECT * FROM tasks WHERE done = %s?;", (int(done),))
+                result = cur.fetchall()
     return  result
 @app.get("/sort")
 async def sort():
-    with sqlite3.connect("tasks.db") as connection:
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM tasks ORDER BY title")
-        return cursor.fetchall()
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM tasks ORDER BY title")
+            return cur.fetchall()
 
 
 @app.get("/tasks/{id}")
 async def get_task(id: int):
-    with sqlite3.connect("tasks.db") as connection:
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM tasks WHERE id = ?;", (id,))
-        task = cursor.fetchone()
-        if task is None:
-            return JSONResponse(status_code=404, content={"error": f"Task {id} not found"})
-        return task
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM tasks WHERE id = %s;", (id,))
+            task = cur.fetchone()
+            if task is None:
+                return JSONResponse(status_code=404, content={"error": f"Task {id} not found"})
+            return task
 
 @app.get("/health")
 async def health_check():
