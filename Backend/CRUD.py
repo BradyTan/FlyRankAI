@@ -4,29 +4,31 @@ from fastapi.exception_handlers import RequestValidationError
 from fastapi import FastAPI, Request
 from typing import Optional
 from pydantic import BaseModel
-import sqlite3
+import psycopg
+import os
+from dotenv import load_dotenv
+load_dotenv()
 data = [
-        ("Sample Task 1", 0),
-        ("Sample Task 2", 0),
-        ("Sample Task 3", 0)
+        ("Sample Task 1", False),
+        ("Sample Task 2", False),
+        ("Sample Task 3", False)
 ]
-
-with sqlite3.connect("tasks.db") as connection:
-    cursor = connection.cursor()
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS tasks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        created_at TEXT default CURRENT_TIMESTAMP,
-        updated_at TEXT default CURRENT_TIMESTAMP,
-        done BOOLEAN NOT NULL CHECK (done IN (0,1)));
-    """)
-    cursor.execute("PRAGMA journal_mode=WAL;")
-    if not cursor.execute("SELECT 1 FROM tasks LIMIT 1").fetchone():
-        cursor.executemany("INSERT INTO tasks (title, done) VALUES (?, ?);", data)
-        connection.commit()
+DATABASE_URL = os.getenv('DATABASE_URL')
+with psycopg.connect(DATABASE_URL) as conn:
+    with conn.cursor() as cur:
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            id serial PRIMARY KEY,
+            title text NOT NULL,
+            created_at text default CURRENT_TIMESTAMP,
+            updated_at text default CURRENT_TIMESTAMP,
+            done boolean NOT NULL);
+        """)
+        if not cur.execute("SELECT 1 FROM tasks LIMIT 1").fetchone():
+            cur.executemany("INSERT INTO tasks (title, done) VALUES (%s, %s);", data)
+            conn.commit()
+        print(cur.execute("SELECT * FROM tasks").fetchall())
 app = FastAPI()
-
 class Task(BaseModel):
     title: Optional[str] = None
     id: Optional[int] = None
