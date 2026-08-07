@@ -11,7 +11,7 @@ load_dotenv()
 data = [
         ("Sample Task 1", False),
         ("Sample Task 2", False),
-        ("Sample Task 3", False)=
+        ("Sample Task 3", False)
 ]
 DATABASE_URL = os.getenv('DATABASE_URL')
 with psycopg.connect(DATABASE_URL) as conn:

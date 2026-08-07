@@ -11,5 +11,6 @@ services:
       POSTGRES_PASSWORD: dev
       POSTGRES_DB: tasks
     volumes: [taskdata:/var/lib/postgresql]
+    ports: ["5432:5432"]
 volumes:
   taskdata:
