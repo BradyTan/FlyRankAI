@@ -90,4 +90,5 @@ content-type: application/json
 | GET /stats |
 | POST /reset |
 
+Why volume exist because it is to store the data for the Postgresql. If it is removed, it returns a Internal Server Error.
 ![Database](./image/BrowserDatabase.PNG)

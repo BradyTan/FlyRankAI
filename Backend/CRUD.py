@@ -90,7 +90,11 @@ async def get_task(id: int):
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok"}
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+            return {"db": "ok"}
+            
 
 @app.post("/tasks", status_code=201)
 async def create_task(task: Create_Task):
