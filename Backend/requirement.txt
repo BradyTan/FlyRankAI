@@ -4,3 +4,5 @@ types-redis
 uvicorn
 pydantic
 typing
+psycopg[binary]
+dotenv

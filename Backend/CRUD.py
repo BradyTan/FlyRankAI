@@ -11,7 +11,7 @@ load_dotenv()
 data = [
         ("Sample Task 1", False),
         ("Sample Task 2", False),
-        ("Sample Task 3", False)
+        ("Sample Task 3", False)=
 ]
 DATABASE_URL = os.getenv('DATABASE_URL')
 with psycopg.connect(DATABASE_URL) as conn:
@@ -36,6 +36,8 @@ class Task(BaseModel):
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
+class Create_Task(BaseModel):
+    title: Optional[str] = None
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(
@@ -91,7 +93,7 @@ async def health_check():
     return {"status": "ok"}
 
 @app.post("/tasks", status_code=201)
-async def create_task(task: Task):
+async def create_task(task: Create_Task):
     if task.title is None:
         return JSONResponse(status_code=400, content={"error": "Title is required"})
     if str(task.title).strip("{}") == "":
